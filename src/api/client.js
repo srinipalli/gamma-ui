@@ -69,17 +69,23 @@ export const api = {
   },
 
   // Network Metrics
-  getNetworkMetrics: async (environment = "All", app_name = "All") => {
+  getNetworkMetrics: async (environment = "All", app_name = "All", page = 1, limit = 10, server = null) => {
     try {
-      const response = await apiClient.get("/network-metrics", {
-        params: { environment, app_name },
-      })
+      const params = new URLSearchParams()
+      if (environment) params.append('environment', environment)
+      if (app_name) params.append('app_name', app_name)
+      if (server) params.append('server', server)
+      params.append('page', page.toString())
+      params.append('limit', limit.toString())
+      
+      const response = await apiClient.get(`/network-metrics?${params.toString()}`)
       return response.data
     } catch (error) {
       console.error("Failed to fetch network metrics:", error)
       throw error
     }
   },
+
 
   // Application Logs
   getAppLogs: async (environment = "All", app_name = "All", filters = {}) => {

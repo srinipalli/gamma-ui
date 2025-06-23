@@ -637,10 +637,10 @@ const alertsToDisplay = activeAlerts.filter(alert => {
           </div>
         )}
       </div>
-      {/* ADD THE CONTEXT MODAL HERE - RIGHT AFTER THE CHAT BOT SECTION */}
+      {/* Enhanced Context Modal */}
       {showContextModal && selectedContext && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className={`rounded-lg shadow-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto ${
+          <div className={`rounded-lg shadow-lg p-6 w-full max-w-5xl max-h-[80vh] overflow-y-auto ${
             isDarkMode ? "bg-gray-800 text-white" : "bg-white"
           }`}>
             <div className="flex items-center justify-between mb-4">
@@ -661,6 +661,17 @@ const alertsToDisplay = activeAlerts.filter(alert => {
                 </div>
               </div>
               
+              {selectedContext.context && selectedContext.context.sql_queries && (
+                <div>
+                  <h4 className="font-semibold mb-2">Generated SQL Queries:</h4>
+                  <div className="bg-purple-50 p-3 rounded border">
+                    <pre className="text-xs overflow-x-auto">
+                      {JSON.stringify(selectedContext.context.sql_queries, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+              
               <div>
                 <h4 className="font-semibold mb-2">Bot Response:</h4>
                 <div className="bg-gray-50 p-3 rounded border">
@@ -670,7 +681,7 @@ const alertsToDisplay = activeAlerts.filter(alert => {
               
               {selectedContext.context && selectedContext.context.infrastructure_data && (
                 <div>
-                  <h4 className="font-semibold mb-2">Infrastructure Data Used:</h4>
+                  <h4 className="font-semibold mb-2">Retrieved Data:</h4>
                   <div className="bg-green-50 p-3 rounded border">
                     <pre className="text-xs overflow-x-auto">
                       {JSON.stringify(selectedContext.context.infrastructure_data, null, 2)}
@@ -678,19 +689,11 @@ const alertsToDisplay = activeAlerts.filter(alert => {
                   </div>
                 </div>
               )}
-              
-              <div>
-                <h4 className="font-semibold mb-2">Full Context:</h4>
-                <div className="bg-yellow-50 p-3 rounded border">
-                  <pre className="text-xs overflow-x-auto">
-                    {JSON.stringify(selectedContext.context, null, 2)}
-                  </pre>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       )}
+
 
       <main className={`px-8 py-8 pt-24 transition-colors duration-300 ${isDarkMode ? "text-white" : ""}`}>
         {children}
