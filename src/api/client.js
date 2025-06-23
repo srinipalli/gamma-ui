@@ -88,21 +88,25 @@ export const api = {
 
 
   // Application Logs
-  getAppLogs: async (environment = "All", app_name = "All", filters = {}) => {
+  getAppLogs: async (environment = "All", app_name = "All", page = 1, limit = 10, filters = {}) => {
     try {
-      const response = await apiClient.get("/app-logs", {
-        params: { 
-          environment, 
-          app_name, // Fixed: was using 'app' instead of 'app_name'
-          ...filters 
-        },
-      })
+      const params = new URLSearchParams()
+      if (environment) params.append('environment', environment)
+      if (app_name) params.append('app_name', app_name)
+      params.append('page', page.toString())
+      params.append('limit', limit.toString())
+      
+      if (filters.search) params.append('search', filters.search)
+      if (filters.level) params.append('level', filters.level)
+      
+      const response = await apiClient.get(`/app-logs?${params.toString()}`)
       return response.data
     } catch (error) {
       console.error("Failed to fetch app logs:", error)
       throw error
     }
   },
+
 
   // Environments and Applications
   getEnvironments: async () => {

@@ -1,13 +1,38 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Cpu, HardDrive, Server, Thermometer, RefreshCw, Brain, AlertTriangle, Activity, Zap } from "lucide-react"
+import { 
+  Activity, 
+  Wifi, 
+  Globe, 
+  RefreshCw, 
+  TrendingUp, 
+  TrendingDown, 
+  Zap, 
+  ChevronLeft, 
+  ChevronRight,
+  Server,
+  CheckCircle,
+  AlertTriangle,
+  Cpu,
+  HardDrive,
+  Thermometer,   // Add this for line 385
+  Brain          // Add this for line 571
+} from "lucide-react"
 import { api } from "../api/client"
 import { getGlobalServerName, getServerDisplayName } from "../utils/serverNaming"
 
 const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
   const [serverMetrics, setServerMetrics] = useState([])
   const [loading, setLoading] = useState(true)
+  const [serverStats, setServerStats] = useState({
+    totalServers: 0,
+    healthyServers: 0,
+    criticalServers: 0,
+    avgCpuUsage: 0,
+    avgMemoryUsage: 0,
+    avgDiskUsage: 0
+  })
   const [predictiveFlags, setPredictiveFlags] = useState([])
   const [selectedServerForAnalysis, setSelectedServerForAnalysis] = useState(null)
   const [showLLMAnalysis, setShowLLMAnalysis] = useState(false)
@@ -98,6 +123,37 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
     fetchPredictiveFlags()
   }, [selectedEnvironment, selectedApp])
 
+  const calculateServerStats = (metrics) => {
+    if (!metrics || metrics.length === 0) {
+      return {
+        totalServers: 0,
+        healthyServers: 0,
+        criticalServers: 0,
+        avgCpuUsage: 0,
+        avgMemoryUsage: 0,
+        avgDiskUsage: 0
+      }
+    }
+
+    const totalServers = metrics.length
+    const healthyServers = metrics.filter(m => m.server_health === "Good").length
+    const criticalServers = metrics.filter(m => 
+      m.server_health === "Critical" || m.server_health === "Bad"
+    ).length
+
+    const avgCpuUsage = metrics.reduce((sum, m) => sum + (m.cpu_usage || 0), 0) / totalServers
+    const avgMemoryUsage = metrics.reduce((sum, m) => sum + (m.memory_usage || 0), 0) / totalServers
+    const avgDiskUsage = metrics.reduce((sum, m) => sum + (m.disk_utilization || 0), 0) / totalServers
+
+    return {
+      totalServers,
+      healthyServers,
+      criticalServers,
+      avgCpuUsage: Math.round(avgCpuUsage * 100) / 100,
+      avgMemoryUsage: Math.round(avgMemoryUsage * 100) / 100,
+      avgDiskUsage: Math.round(avgDiskUsage * 100) / 100
+    }
+  }
   const fetchServerMetrics = async () => {
     try {
       setLoading(true)
@@ -390,7 +446,11 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Server Metrics</h1>
-          <p className="text-gray-600">Real-time server performance monitoring</p>
+          <p className="text-gray-600">
+            Real-time server performance monitoring
+            {selectedEnvironment !== "All" && ` - ${selectedEnvironment}`}
+            {selectedApp !== "All" && ` - ${selectedApp}`}
+          </p>
         </div>
         <button
           onClick={fetchServerMetrics}
@@ -400,7 +460,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
           Refresh
         </button>
       </div>
-      
+
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -408,6 +468,80 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
         </div>
       ) : (
         <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <Server className="w-8 h-8 text-blue-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                    Total Servers
+                  </p>
+                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                    {serverStats.totalServers}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <CheckCircle className="w-8 h-8 text-green-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Healthy</p>
+                  <p className="text-2xl font-bold text-green-600">{serverStats.healthyServers}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Critical</p>
+                  <p className="text-2xl font-bold text-red-600">{serverStats.criticalServers}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <Cpu className="w-8 h-8 text-purple-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                    Avg CPU Usage
+                  </p>
+                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                    {serverStats.avgCpuUsage}%
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <Activity className="w-8 h-8 text-orange-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Avg Memory</p>
+                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                    {serverStats.avgMemoryUsage}%
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <HardDrive className="w-8 h-8 text-indigo-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Avg Disk Usage</p>
+                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                    {serverStats.avgDiskUsage}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {serverMetrics.map((metric, index) => (
               <ServerMetricCard key={`${metric.server}-${metric.environment}`} metric={metric} />

@@ -1,12 +1,32 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FileText, Search, Filter, RefreshCw, AlertTriangle, Info, CheckCircle, Brain, Loader2 } from "lucide-react"
+import { FileText, Search, Filter, RefreshCw, AlertTriangle, Info, CheckCircle, Brain, Loader2, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { api } from "../api/client"
 
 const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
+  const [logStats, setLogStats] = useState({
+    totalLogs: 0,
+    errorLogs: 0,
+    warningLogs: 0,
+    infoLogs: 0,
+    criticalLogs: 0,
+    recentErrors: 0
+  })
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    total_pages: 0,
+    total_count: 0,
+    page_size: 10,
+    has_next: false,
+    has_prev: false,
+    start_index: 0,
+    end_index: 0
+  })
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
   const [searchTerm, setSearchTerm] = useState("")
   const [levelFilter, setLevelFilter] = useState("ALL")
   const [selectedLog, setSelectedLog] = useState(null)
@@ -15,20 +35,49 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
   const [analysisError, setAnalysisError] = useState(null)
 
   useEffect(() => {
-    fetchLogs()
-  }, [selectedEnvironment, selectedApp])
+    setCurrentPage(1) // Reset to first page when filters change
+    fetchLogs(1, pageSize)
+  }, [selectedEnvironment, selectedApp, searchTerm, levelFilter])
 
-  const fetchLogs = async () => {
+  useEffect(() => {
+    fetchLogs(currentPage, pageSize)
+  }, [currentPage, pageSize])
+
+  const fetchLogs = async (page = 1, limit = 10) => {
     try {
       setLoading(true)
-      const logsData = await api.getAppLogs(selectedEnvironment, selectedApp, {
+      console.log("Fetching app logs for:", selectedEnvironment, selectedApp, page, limit)
+      
+      const logsData = await api.getAppLogs(selectedEnvironment, selectedApp, page, limit, {
         search: searchTerm,
         level: levelFilter !== "ALL" ? levelFilter : undefined,
       })
-      setLogs(logsData)
+      
+      console.log("Received app logs:", logsData)
+      
+      setLogs(logsData.logs || [])
+      setLogStats(logsData.stats || {
+        totalLogs: 0,
+        errorLogs: 0,
+        warningLogs: 0,
+        infoLogs: 0,
+        criticalLogs: 0,
+        recentErrors: 0
+      })
+      setPagination(logsData.pagination || {
+        current_page: 1,
+        total_pages: 0,
+        total_count: 0,
+        page_size: limit,
+        has_next: false,
+        has_prev: false,
+        start_index: 0,
+        end_index: 0
+      })
     } catch (error) {
       console.error("Failed to fetch logs:", error)
-      // Fallback to mock data
+      
+      // Fallback to mock data for testing
       const mockLogs = [
         {
           _id: "684872a73b32c2c8384e972b",
@@ -54,28 +103,7 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
           app_name: "app1",
           exception_type: "ConnectionTimeoutException",
           exception_message: "Connection timeout after 30 seconds",
-          stacktrace:
-            "at DatabaseService.connect(DatabaseService.java:45)\n    at UserController.getUsers(UserController.java:23)",
-        },
-        {
-          _id: "684872a73b32c2c8384e972d",
-          timestamp: new Date(Date.now() - 60000).toISOString(),
-          level: "WARNING",
-          message: "High memory usage detected: 85% of available memory in use",
-          logger: "MemoryMonitor",
-          environment: "Production",
-          server: "server2",
-          app_name: "app1",
-        },
-        {
-          _id: "684872a73b32c2c8384e972e",
-          timestamp: new Date(Date.now() - 120000).toISOString(),
-          level: "INFO",
-          message: "User authentication successful for user: john.doe@example.com",
-          logger: "AuthService",
-          environment: "Production",
-          server: "server1",
-          app_name: "app2",
+          stacktrace: "at DatabaseService.connect(DatabaseService.java:45)\n    at UserController.getUsers(UserController.java:23)",
         }
       ]
 
@@ -88,9 +116,26 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
       }
 
       setLogs(filteredLogs)
+      setLogStats({
+        totalLogs: filteredLogs.length,
+        errorLogs: filteredLogs.filter(log => log.level === "ERROR").length,
+        warningLogs: filteredLogs.filter(log => log.level === "WARNING").length,
+        infoLogs: filteredLogs.filter(log => log.level === "INFO").length,
+        criticalLogs: filteredLogs.filter(log => log.level === "CRITICAL").length,
+        recentErrors: filteredLogs.filter(log => log.level === "ERROR").length
+      })
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage)
+  }
+
+  const handlePageSizeChange = (newSize) => {
+    setPageSize(newSize)
+    setCurrentPage(1) // Reset to first page when changing page size
   }
 
   const fetchLLMAnalysis = async (logId) => {
@@ -140,14 +185,6 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
     fetchLLMAnalysis(log._id)
   }
 
-  const filteredLogs = logs.filter((log) => {
-    const matchesSearch =
-      log.message.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (log.logger && log.logger.toLowerCase().includes(searchTerm.toLowerCase()))
-    const matchesLevel = levelFilter === "ALL" || log.level === levelFilter
-    return matchesSearch && matchesLevel
-  })
-
   const getLevelIcon = (level) => {
     switch (level) {
       case "ERROR":
@@ -192,47 +229,19 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Application Logs</h1>
-          <p className="text-gray-600">Real-time application logging and error tracking</p>
+          <p className="text-gray-600">
+            Real-time application logging and error tracking
+            {selectedEnvironment !== "All" && ` - ${selectedEnvironment}`}
+            {selectedApp !== "All" && ` - ${selectedApp}`}
+          </p>
         </div>
         <button
-          onClick={fetchLogs}
+          onClick={() => fetchLogs(currentPage, pageSize)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
           <RefreshCw className="w-4 h-4" />
           Refresh
         </button>
-      </div>
-
-      <div
-        className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800" : "bg-white"}`}
-      >
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search logs..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-500" />
-            <select
-              value={levelFilter}
-              onChange={(e) => setLevelFilter(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="ALL">All Levels</option>
-              <option value="ERROR">Error</option>
-              <option value="WARNING">Warning</option>
-              <option value="INFO">Info</option>
-            </select>
-          </div>
-        </div>
       </div>
 
       {loading ? (
@@ -241,44 +250,233 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
           <span className="ml-3 text-gray-600">Loading application logs...</span>
         </div>
       ) : (
-        <div className="space-y-4">
-          {filteredLogs.map((log) => (
-            <div
-              key={log._id || log.id}
-              className={`rounded-lg shadow border-l-4 p-4 cursor-pointer hover:shadow-md transition-all duration-300 ${getLevelColor(
-                log.level,
-              )} ${isDarkMode ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-50"}`}
-              onClick={() => handleLogSelect(log)}
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <span className="font-mono text-xs text-gray-500">
-                  {new Date(log.timestamp || log.createdAt).toLocaleString()}
-                </span>
-                <span className={`px-2 py-1 rounded text-xs font-semibold ${getLevelBadgeColor(log.level)}`}>
-                  {log.level}
-                </span>
-                <span className="text-xs text-gray-600">{log.logger}</span>
-                <span className="text-xs text-blue-600">{log.environment}</span>
-                <span className="text-xs text-green-600">{log.app_name}</span>
-                <span className="text-xs text-purple-600">{log.server}</span>
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <FileText className="w-8 h-8 text-blue-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                    Total Logs
+                  </p>
+                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                    {logStats.totalLogs}
+                  </p>
+                </div>
               </div>
-              <div className="text-sm text-gray-900">{log.message}</div>
-              {log.exception_type && (
-                <div className="mt-2 text-xs text-red-700">
-                  <strong>{log.exception_type}:</strong> {log.exception_message}
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <AlertTriangle className="w-8 h-8 text-red-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Errors</p>
+                  <p className="text-2xl font-bold text-red-600">{logStats.errorLogs}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <TrendingDown className="w-8 h-8 text-yellow-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Warnings</p>
+                  <p className="text-2xl font-bold text-yellow-600">{logStats.warningLogs}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <Info className="w-8 h-8 text-green-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                    Info Logs
+                  </p>
+                  <p className="text-2xl font-bold text-green-600">{logStats.infoLogs}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <Brain className="w-8 h-8 text-purple-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Critical</p>
+                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                    {logStats.criticalLogs}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+              <div className="flex items-center">
+                <TrendingUp className="w-8 h-8 text-orange-500" />
+                <div className="ml-4">
+                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Recent Errors</p>
+                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                    {logStats.recentErrors}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Search and Filter */}
+          <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800" : "bg-white"}`}>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search logs..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <select
+                  value={levelFilter}
+                  onChange={(e) => setLevelFilter(e.target.value)}
+                  className="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="ALL">All Levels</option>
+                  <option value="ERROR">Error</option>
+                  <option value="WARNING">Warning</option>
+                  <option value="INFO">Info</option>
+                  <option value="CRITICAL">Critical</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Logs Table */}
+          <div className={`rounded-lg shadow overflow-hidden transition-colors duration-300 ${isDarkMode ? "bg-gray-800" : "bg-white"}`}>
+            <div className={`px-6 py-4 border-b ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
+              <div className="flex items-center justify-between">
+                <h3 className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                  Application Logs
+                </h3>
+                <div className="flex items-center gap-4">
+                  <span className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                    Showing {pagination.start_index}-{pagination.end_index} of {pagination.total_count} entries
+                  </span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                  >
+                    <option value={10}>10 per page</option>
+                    <option value={25}>25 per page</option>
+                    <option value={50}>50 per page</option>
+                    <option value={100}>100 per page</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Logs Display */}
+            <div className="space-y-4 p-4">
+              {logs.map((log) => (
+                <div
+                  key={log._id}
+                  className={`rounded-lg shadow border-l-4 p-4 cursor-pointer hover:shadow-md transition-all duration-300 ${getLevelColor(log.level)} ${isDarkMode ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-50"}`}
+                  onClick={() => handleLogSelect(log)}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-mono text-xs text-gray-500">
+                      {new Date(log.timestamp || log.createdAt).toLocaleString()}
+                    </span>
+                    <span className={`px-2 py-1 rounded text-xs font-semibold ${getLevelBadgeColor(log.level)}`}>
+                      {log.level}
+                    </span>
+                    <span className="text-xs text-gray-600">{log.logger}</span>
+                    <span className="text-xs text-blue-600">{log.environment}</span>
+                    <span className="text-xs text-green-600">{log.app_name}</span>
+                    <span className="text-xs text-purple-600">{log.server}</span>
+                  </div>
+                  <div className="text-sm text-gray-900">{log.message}</div>
+                  {log.exception_type && (
+                    <div className="mt-2 text-xs text-red-700">
+                      <strong>{log.exception_type}:</strong> {log.exception_message}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {logs.length === 0 && (
+                <div className="text-center py-12">
+                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No logs found</h3>
+                  <p className="text-gray-600">No logs match the current filters and search criteria.</p>
                 </div>
               )}
             </div>
-          ))}
 
-          {filteredLogs.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No logs found</h3>
-              <p className="text-gray-600">No logs match the current filters and search criteria.</p>
-            </div>
-          )}
-        </div>
+            {/* Pagination Controls */}
+            {pagination.total_pages > 1 && (
+              <div className={`px-6 py-4 border-t ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
+                <div className="flex items-center justify-between">
+                  <div className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
+                    Page {pagination.current_page} of {pagination.total_pages}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={!pagination.has_prev}
+                      className={`px-3 py-1 rounded border ${
+                        pagination.has_prev
+                          ? "border-gray-300 hover:bg-gray-50"
+                          : "border-gray-200 text-gray-400 cursor-not-allowed"
+                      }`}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(5, pagination.total_pages) }, (_, i) => {
+                      const page = Math.max(1, pagination.current_page - 2) + i
+                      if (page <= pagination.total_pages) {
+                        return (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`px-3 py-1 rounded border ${
+                              page === pagination.current_page
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "border-gray-300 hover:bg-gray-50"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        )
+                      }
+                      return null
+                    })}
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={!pagination.has_next}
+                      className={`px-3 py-1 rounded border ${
+                        pagination.has_next
+                          ? "border-gray-300 hover:bg-gray-50"
+                          : "border-gray-200 text-gray-400 cursor-not-allowed"
+                      }`}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Log Detail Modal */}
@@ -360,7 +558,7 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                 </div>
               )}
 
-              {/* Real LLM Analysis Section */}
+              {/* LLM Analysis Section */}
               <div className="border-t border-gray-200 pt-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center">
