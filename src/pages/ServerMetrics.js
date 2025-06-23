@@ -159,6 +159,9 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
       setLoading(true)
       const metrics = await api.getServerMetrics(selectedEnvironment, selectedApp)
       setServerMetrics(metrics)
+      // Calculate stats
+      const stats = calculateServerStats(metrics)
+      setServerStats(stats)
     } catch (error) {
       console.error("Failed to fetch server metrics:", error)
       // Fallback data
@@ -312,7 +315,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
             <span className="text-xs text-gray-500 ml-2">({metric.environment})</span>
           </h4>
           <div className="flex items-center gap-2">
-            <span
+            {/*<span
               className={`text-xs px-2 py-1 rounded-full ${
                 metric.server_health === "Critical"
                   ? "bg-red-100 text-red-700"
@@ -322,7 +325,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
               }`}
             >
               {metric.server_health}
-            </span>
+            </span>*/}
             {isFlagged && (
               <span className="text-xs px-2 py-1 rounded-full bg-red-600 text-white">
                 Failure Risk

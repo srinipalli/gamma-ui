@@ -42,6 +42,22 @@ export const api = {
     }
   },
 
+  getDdosActivity: async (environment = "All", app_name = "All") => {
+    try {
+      const params = new URLSearchParams()
+      if (environment) params.append('environment', environment)
+      if (app_name) params.append('app_name', app_name)
+      
+      const response = await apiClient.get(`/ddos-activity?${params.toString()}`)
+      return response.data
+    } catch (error) {
+      console.error("Failed to fetch DDoS activity:", error)
+      return { unique_servers: 0, servers: [], predictions: [] }
+    }
+  },
+
+
+
   // Performance Summary
   getPerformanceSummary: async (environment = "All", app_name = "All") => {
     try {

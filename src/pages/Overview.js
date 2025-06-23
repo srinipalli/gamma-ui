@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Activity, Shield, AlertCircle, RefreshCw, CheckCircle, Server, Brain, AlertTriangle, Zap } from "lucide-react"
+import { Activity, Shield, AlertCircle, RefreshCw, CheckCircle, Server, Brain, AlertTriangle, Zap, Router, ShieldAlert } from "lucide-react"
 import GrafanaChart from "../components/GrafanaChart"
 import { api } from "../api/client"
 import { getGlobalServerName } from "../utils/serverNaming"
@@ -12,6 +12,8 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
   const [summaryData, setSummaryData] = useState({})
   const [dashboardStats, setDashboardStats] = useState({})
   const [predictiveFlags, setPredictiveFlags] = useState([])
+  const [ddosServers, setDdosServers] = useState(0)
+
 
   // Helper function to parse AI summary with insights
   const parseAISummary = (summary) => {
@@ -23,6 +25,27 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
     }
     return { mainSummary: summary, insights: [] }
   }
+
+  const fetchDdosActivity = async () => {
+    try {
+      console.log("=== DDOS DEBUG START ===")
+      console.log("Fetching DDoS activity for:", selectedEnvironment, selectedApp)
+      
+      const ddosData = await api.getDdosActivity(selectedEnvironment, selectedApp)
+      console.log("DDoS activity response:", ddosData)
+      console.log("Unique servers count:", ddosData.unique_servers)
+      
+      // Set the count of unique servers with DDoS activity
+      setDdosServers(ddosData.unique_servers || 0)
+      console.log("DDoS servers state set to:", ddosData.unique_servers || 0)
+      console.log("=== DDOS DEBUG END ===")
+    } catch (error) {
+      console.error("Failed to fetch DDoS activity:", error)
+      setDdosServers(0)
+    }
+  }
+
+
 
   const fetchPerformanceSummary = useCallback(async () => {
     setSummaryLoading(true)
@@ -62,6 +85,7 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
   useEffect(() => {
     fetchDashboardStats()
     fetchPredictiveFlags()
+    fetchDdosActivity()
   }, [selectedEnvironment, selectedApp])
 
   const fetchDashboardStats = async () => {
@@ -115,41 +139,76 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
     <div className="space-y-8">
       {/* Enhanced Dashboard Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-        <div className={`rounded-lg shadow p-6 flex flex-col items-center transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-          <AlertTriangle className="w-8 h-8 text-red-500 mb-2" />
-          <h3 className="text-lg font-semibold">Application Errors</h3>
-          <p className="text-2xl font-bold">
-            {dashboardStats.error_stats?.reduce((sum, stat) => sum + stat.count, 0) || 0}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Last 24 hours</p>
+        {/* Active Servers - First */}
+        <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+          <div className="flex items-start">
+            <Server className="w-8 h-8 text-blue-500 mt-1" />
+            <div className="ml-4 flex-1">
+              <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                Active Servers
+              </p>
+              <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-1`}>
+                {getActiveServerCount()}
+              </p>
+              <p className="text-xs text-gray-500">
+                Monitored
+              </p>
+            </div>
+          </div>
         </div>
-        
-        <div className={`rounded-lg shadow p-6 flex flex-col items-center transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-          <CheckCircle className="w-8 h-8 text-green-500 mb-2" />
-          <h3 className="text-lg font-semibold">Healthy Servers</h3>
-          <p className="text-2xl font-bold">
-            {dashboardStats.health_stats?.find((stat) => stat._id === "Good")?.count || 0}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Current status</p>
+
+        {/* At-Risk Servers - Second */}
+        <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+          <div className="flex items-start">
+            <Zap className="w-8 h-8 text-orange-500 mt-1" />
+            <div className="ml-4 flex-1">
+              <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                At-Risk Servers
+              </p>
+              <p className={`text-2xl font-bold text-orange-600 mb-1`}>
+                {predictiveFlags.length}
+              </p>
+              <p className="text-xs text-gray-500">
+                Servers at risk
+              </p>
+            </div>
+          </div>
         </div>
-        
-        <div className={`rounded-lg shadow p-6 flex flex-col items-center transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-          <Server className="w-8 h-8 text-blue-500 mb-2" />
-          <h3 className="text-lg font-semibold">Active Servers</h3>
-          <p className="text-2xl font-bold">
-            {getActiveServerCount()}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Monitored</p>
-         
+
+        {/* DDoS Threats - Third */}
+        <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+          <div className="flex items-start">
+            <Shield className="w-8 h-8 text-red-500 mt-1" />
+            <div className="ml-4 flex-1">
+              <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                DDoS Threats
+              </p>
+              <p className={`text-2xl font-bold text-red-600 mb-1`}>
+                {ddosServers}
+              </p>
+              <p className="text-xs text-gray-500">
+                Servers at risk
+              </p>
+            </div>
+          </div>
         </div>
-        
-        <div className={`rounded-lg shadow p-6 flex flex-col items-center transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-          <Zap className="w-8 h-8 text-orange-500 mb-2" />
-          <h3 className="text-lg font-semibold">At-Risk Servers</h3>
-          <p className="text-2xl font-bold text-orange-600">
-            {predictiveFlags.length}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Predictive alerts</p>
+
+        {/* Application Errors - Fourth */}
+        <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
+          <div className="flex items-start">
+            <AlertTriangle className="w-8 h-8 text-red-500 mt-1" />
+            <div className="ml-4 flex-1">
+              <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                Application Errors
+              </p>
+              <p className={`text-2xl font-bold text-red-600 mb-1`}>
+                {dashboardStats.error_stats?.reduce((sum, stat) => sum + stat.count, 0) || 0}
+              </p>
+              <p className="text-xs text-gray-500">
+                Last 24 hours
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
