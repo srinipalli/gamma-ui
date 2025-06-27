@@ -12,6 +12,14 @@ const GrafanaChart = ({
 }) => {
   const grafanaUrl = process.env.REACT_APP_GRAFANA_URL || "http://localhost:3000"
 
+  // Environment mapping - Frontend to Grafana/Prometheus values
+  const environmentMapping = {
+    "Development": "Dev",
+    "Staging": "Stage", 
+    "Production": "Prod",
+    "QA": "QA"
+  }
+
   const baseUrl = `${grafanaUrl}/d-solo/${dashboardId}/${slug}`
   const params = new URLSearchParams({
     orgId: "1",
@@ -22,9 +30,17 @@ const GrafanaChart = ({
     theme: isDarkMode ? "dark" : "light",
   })
 
+  // Apply environment mapping to variables
   Object.entries(variables).forEach(([key, value]) => {
     if (value) {
-      params.append(`var-${key}`, value)
+      let mappedValue = value
+      
+      // Apply environment mapping if this is an environment variable
+      if (key === 'environment' || key === 'environments') {
+        mappedValue = environmentMapping[value] || value
+      }
+      
+      params.append(`var-${key}`, mappedValue)
     }
   })
 

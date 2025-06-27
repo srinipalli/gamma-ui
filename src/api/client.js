@@ -353,6 +353,41 @@ export const api = {
       throw error
     }
   },
+ async getAttackPredictions(environment, app) {
+    try {
+      const params = new URLSearchParams();
+
+      if (environment && environment !== "All") {
+        params.append('environment', environment);
+      }
+      if (app && app !== "All") {
+        params.append('app', app);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/attack-predictions?${params}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching attack predictions:', error);
+      throw error;
+    }
+  },
+
+  // Seed attack predictions method (for testing)
+  async seedAttackPredictions() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/seed-attack-predictions`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error seeding attack predictions:', error);
+      throw error;
+    }
+  },
 
   getChatHistory: async (limit = 50, session_id = "default") => {
     try {

@@ -35,9 +35,9 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
   const [analysisError, setAnalysisError] = useState(null)
 
   useEffect(() => {
-    setCurrentPage(1) // Reset to first page when filters change
+    setCurrentPage(1)
     fetchLogs(1, pageSize)
-  }, [selectedEnvironment, selectedApp, searchTerm, levelFilter])
+  }, [selectedEnvironment, selectedApp])
 
   useEffect(() => {
     fetchLogs(currentPage, pageSize)
@@ -48,10 +48,7 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
       setLoading(true)
       console.log("Fetching app logs for:", selectedEnvironment, selectedApp, page, limit)
       
-      const logsData = await api.getAppLogs(selectedEnvironment, selectedApp, page, limit, {
-        search: searchTerm,
-        level: levelFilter !== "ALL" ? levelFilter : undefined,
-      })
+      const logsData = await api.getAppLogs(selectedEnvironment, selectedApp, page, limit, {})
       
       console.log("Received app logs:", logsData)
       
@@ -76,58 +73,27 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
       })
     } catch (error) {
       console.error("Failed to fetch logs:", error)
-      
-      // Fallback to mock data for testing
-      const mockLogs = [
-        {
-          _id: "684872a73b32c2c8384e972b",
-          timestamp: "2025-06-06 10:20:01.456",
-          level: "INFO",
-          message: "No active profile set, falling back to default profiles: default",
-          logger: "com.example.MyApp",
-          environment: "Dev",
-          server: "server1",
-          app_name: "app1",
-          path: "D:/Innova/Infra/Data/Dev/server1/app1.log",
-          log_type: "app_log",
-          createdAt: "2025-06-10T18:00:07.077000Z"
-        },
-        {
-          _id: "684872a73b32c2c8384e972c",
-          timestamp: new Date().toISOString(),
-          level: "ERROR",
-          message: "Database connection failed: Connection timeout after 30 seconds",
-          logger: "DatabaseService",
-          environment: "Production",
-          server: "server1",
-          app_name: "app1",
-          exception_type: "ConnectionTimeoutException",
-          exception_message: "Connection timeout after 30 seconds",
-          stacktrace: "at DatabaseService.connect(DatabaseService.java:45)\n    at UserController.getUsers(UserController.java:23)",
-        }
-      ]
-
-      let filteredLogs = mockLogs
-      if (selectedEnvironment !== "All") {
-        filteredLogs = filteredLogs.filter((log) => log.environment === selectedEnvironment)
-      }
-      if (selectedApp !== "All") {
-        filteredLogs = filteredLogs.filter((log) => log.app_name === selectedApp)
-      }
-
-      setLogs(filteredLogs)
+      setLogs([])
       setLogStats({
-        totalLogs: filteredLogs.length,
-        errorLogs: filteredLogs.filter(log => log.level === "ERROR").length,
-        warningLogs: filteredLogs.filter(log => log.level === "WARNING").length,
-        infoLogs: filteredLogs.filter(log => log.level === "INFO").length,
-        criticalLogs: filteredLogs.filter(log => log.level === "CRITICAL").length,
-        recentErrors: filteredLogs.filter(log => log.level === "ERROR").length
+        totalLogs: 0,
+        errorLogs: 0,
+        warningLogs: 0,
+        infoLogs: 0,
+        criticalLogs: 0,
+        recentErrors: 0
       })
     } finally {
       setLoading(false)
     }
   }
+
+  const filteredLogs = logs.filter((log) => {
+    const matchesSearch =
+      log.message?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (log.logger && log.logger.toLowerCase().includes(searchTerm.toLowerCase()))
+    const matchesLevel = levelFilter === "ALL" || log.level === levelFilter
+    return matchesSearch && matchesLevel
+  })
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage)
@@ -135,7 +101,7 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
 
   const handlePageSizeChange = (newSize) => {
     setPageSize(newSize)
-    setCurrentPage(1) // Reset to first page when changing page size
+    setCurrentPage(1)
   }
 
   const fetchLLMAnalysis = async (logId) => {
@@ -181,7 +147,6 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
     setSelectedLog(log)
     setLlmAnalysis(null)
     setAnalysisError(null)
-    // Automatically fetch analysis when log is selected
     fetchLLMAnalysis(log._id)
   }
 
@@ -365,7 +330,7 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                 </h3>
                 <div className="flex items-center gap-4">
                   <span className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
-                    Showing {pagination.start_index}-{pagination.end_index} of {pagination.total_count} entries
+                    Showing {filteredLogs.length} of {logs.length} entries
                   </span>
                   <select
                     value={pageSize}
@@ -383,7 +348,7 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
 
             {/* Logs Display */}
             <div className="space-y-4 p-4">
-              {logs.map((log) => (
+              {filteredLogs.map((log) => (
                 <div
                   key={log._id}
                   className={`rounded-lg shadow border-l-4 p-4 cursor-pointer hover:shadow-md transition-all duration-300 ${getLevelColor(log.level)} ${isDarkMode ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-50"}`}
@@ -410,7 +375,7 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                 </div>
               ))}
 
-              {logs.length === 0 && (
+              {filteredLogs.length === 0 && (
                 <div className="text-center py-12">
                   <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No logs found</h3>
@@ -439,7 +404,6 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     
-                    {/* Page numbers */}
                     {Array.from({ length: Math.min(5, pagination.total_pages) }, (_, i) => {
                       const page = Math.max(1, pagination.current_page - 2) + i
                       if (page <= pagination.total_pages) {
@@ -611,7 +575,6 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                 ) : llmAnalysis ? (
                   <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
                     <div className="space-y-4">
-                      {/* Issue */}
                       <div>
                         <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                           <AlertTriangle className="w-4 h-4 text-red-500" />
@@ -624,7 +587,6 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                         </div>
                       </div>
 
-                      {/* Impact */}
                       <div>
                         <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                           <AlertTriangle className="w-4 h-4 text-yellow-500" />
@@ -637,7 +599,6 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                         </div>
                       </div>
 
-                      {/* Resolution */}
                       <div>
                         <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                           <CheckCircle className="w-4 h-4 text-green-500" />
@@ -650,7 +611,6 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                         </div>
                       </div>
 
-                      {/* Commands */}
                       {llmAnalysis.commands && llmAnalysis.commands.length > 0 && (
                         <div>
                           <h4 className="font-semibold text-gray-800 mb-2">Commands:</h4>
@@ -664,7 +624,6 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                         </div>
                       )}
 
-                      {/* Original Log Reference */}
                       {llmAnalysis.original_log && (
                         <div className="border-t border-gray-200 pt-3">
                           <h4 className="font-medium text-gray-600 text-xs mb-2">Analysis Generated For:</h4>
