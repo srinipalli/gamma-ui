@@ -12,35 +12,57 @@ const LiquidGlass = ({ children, className = "", variant = "card", intensity = "
   const [isHovering, setIsHovering] = useState(false)
   const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 })
 
-  const getVariantClasses = () => {
-    const baseClasses = "liquid-glass relative overflow-hidden"
-    switch (variant) {
-      case "button":
-        return `${baseClasses} cursor-pointer select-none transition-all duration-300 hover:scale-[1.02]`
-      case "card":
-        return `${baseClasses} transition-all duration-300 hover:scale-[1.01]`
-      case "panel":
-        return `${baseClasses}`
-      default:
-        return baseClasses
-    }
+const getVariantClasses = () => {
+  const baseClasses = `liquid-glass relative overflow-hidden ${
+    isDarkMode ? "" : "shadow-sm hover:shadow-md"
+  }`
+  
+  switch (variant) {
+    case "button":
+      return `${baseClasses} cursor-pointer select-none transition-all duration-300 hover:scale-[1.02] ${
+        isDarkMode ? "" : "hover:shadow-lg"
+      }`
+    case "card":
+      return `${baseClasses} transition-all duration-300 hover:scale-[1.01] ${
+        isDarkMode ? "" : "hover:shadow-lg"
+      }`
+    case "panel":
+      return `${baseClasses} ${isDarkMode ? "" : "shadow-md"}`
+    default:
+      return baseClasses
   }
+}
 
-  const getIntensityClasses = () => {
-    const darkBg = isDarkMode ? "bg-gray-800/60" : "bg-white/60"
-    const lightBorder = isDarkMode ? "border-gray-600/40" : "border-gray-200/40"
-    
-    switch (intensity) {
-      case "subtle":
-        return `backdrop-blur-sm ${isDarkMode ? "bg-gray-800/40" : "bg-white/40"} ${lightBorder}`
-      case "strong":
-        return `backdrop-blur-3xl ${isDarkMode ? "bg-gray-800/80" : "bg-white/80"} ${lightBorder}`
-      case "ultra":
-        return `backdrop-blur-[40px] ${isDarkMode ? "bg-gray-800/90" : "bg-white/90"} ${lightBorder}`
-      default:
-        return `backdrop-blur-xl ${darkBg} ${lightBorder}`
-    }
+
+const getIntensityClasses = () => {
+  switch (intensity) {
+    case "subtle":
+      return `backdrop-blur-sm ${
+        isDarkMode 
+          ? "bg-gray-800/40 border-gray-600/40" 
+          : "bg-white/70 border-gray-300/50 shadow-sm"
+      }`
+    case "strong":
+      return `backdrop-blur-3xl ${
+        isDarkMode 
+          ? "bg-gray-800/80 border-gray-600/40" 
+          : "bg-white/85 border-gray-300/60 shadow-lg"
+      }`
+    case "ultra":
+      return `backdrop-blur-[40px] ${
+        isDarkMode 
+          ? "bg-gray-800/90 border-gray-600/40" 
+          : "bg-white/95 border-gray-300/70 shadow-xl"
+      }`
+    default:
+      return `backdrop-blur-xl ${
+        isDarkMode 
+          ? "bg-gray-800/60 border-gray-600/40" 
+          : "bg-white/80 border-gray-300/60 shadow-md"
+      }`
   }
+}
+
 
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -69,8 +91,8 @@ const LiquidGlass = ({ children, className = "", variant = "card", intensity = "
         <motion.div
           className="absolute pointer-events-none"
           style={{
-            left: cursorPos.x,
-            top: cursorPos.y,
+            left: cursorPos.x - 60,
+            top: cursorPos.y - 60,
             width: "120px",
             height: "120px",
             background: isDarkMode 
@@ -215,92 +237,102 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
         : "bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/30"
     }`}>
       
-      {/* Dashboard Stats with Liquid Glass */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 relative z-10 pt-8">
-        {/* Active Servers */}
-        <LiquidGlass 
-          variant="card" 
-          intensity="medium"
-          isDarkMode={isDarkMode}
-          className="p-6"
-        >
-          <div className="flex items-start">
-            <Server className="w-8 h-8 text-blue-500 mt-1" />
-            <div className="ml-4 flex-1">
-              <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
-                Active Servers
-              </p>
-              <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-1`}>
-                {getActiveServerCount()}
-              </p>
-              <p className="text-xs text-gray-500">Monitored</p>
-            </div>
-          </div>
-        </LiquidGlass>
-
-        {/* At-Risk Servers */}
-        <LiquidGlass 
-          variant="card" 
-          intensity="medium"
-          isDarkMode={isDarkMode}
-          className="p-6"
-        >
-          <div className="flex items-start">
-            <Zap className="w-8 h-8 text-orange-500 mt-1" />
-            <div className="ml-4 flex-1">
-              <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
-                At-Risk Servers
-              </p>
-              <p className="text-2xl font-bold text-orange-600 mb-1">
-                {predictiveFlags.length}
-              </p>
-              <p className="text-xs text-gray-500">Servers at risk</p>
-            </div>
-          </div>
-        </LiquidGlass>
-
-        {/* DDoS Threats */}
-        <LiquidGlass 
-          variant="card" 
-          intensity="medium"
-          isDarkMode={isDarkMode}
-          className="p-6"
-        >
-          <div className="flex items-start">
-            <Shield className="w-8 h-8 text-red-500 mt-1" />
-            <div className="ml-4 flex-1">
-              <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
-                DDoS Threats
-              </p>
-              <p className="text-2xl font-bold text-red-600 mb-1">
-                {ddosServers}
-              </p>
-              <p className="text-xs text-gray-500">Servers at risk</p>
-            </div>
-          </div>
-        </LiquidGlass>
-
-        {/* Application Errors */}
-        <LiquidGlass 
-          variant="card" 
-          intensity="medium"
-          isDarkMode={isDarkMode}
-          className="p-6"
-        >
-          <div className="flex items-start">
-            <AlertTriangle className="w-8 h-8 text-red-500 mt-1" />
-            <div className="ml-4 flex-1">
-              <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
-                Application Errors
-              </p>
-              <p className="text-2xl font-bold text-red-600 mb-1">
-                {dashboardStats.error_stats?.reduce((sum, stat) => sum + stat.count, 0) || 0}
-              </p>
-              <p className="text-xs text-gray-500">Last 24 hours</p>
-            </div>
-          </div>
-        </LiquidGlass>
+{/* Unified Dashboard Metrics Container */}
+<LiquidGlass 
+  variant="card" 
+  intensity="strong"
+  isDarkMode={isDarkMode}
+  className="p-6"
+>
+  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    {/* Active Servers */}
+    <LiquidGlass 
+      variant="card" 
+      intensity="medium"
+      isDarkMode={isDarkMode}
+      className="p-6 transition-all duration-300 hover:scale-105"
+    >
+      <div className="flex items-start">
+        <Server className="w-8 h-8 text-blue-500 mt-1" />
+        <div className="ml-4 flex-1">
+          <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+            Active Servers
+          </p>
+          <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-1`}>
+            {getActiveServerCount()}
+          </p>
+          <p className="text-xs text-gray-500">Monitored</p>
+        </div>
       </div>
+    </LiquidGlass>
+
+    {/* At-Risk Servers - Click to go to server metrics */}
+    <LiquidGlass 
+      variant="card" 
+      intensity="medium"
+      isDarkMode={isDarkMode}
+      className="p-6 cursor-pointer transition-all duration-300 hover:scale-105"
+      onClick={() => onPageChange("server-metrics")}
+    >
+      <div className="flex items-start">
+        <Zap className="w-8 h-8 text-orange-500 mt-1" />
+        <div className="ml-4 flex-1">
+          <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+            At-Risk Servers
+          </p>
+          <p className="text-2xl font-bold text-orange-600 mb-1">
+            {predictiveFlags.length}
+          </p>
+          <p className="text-xs text-gray-500">Servers at risk</p>
+        </div>
+      </div>
+    </LiquidGlass>
+
+    {/* DDoS Threats - Click to go to network metrics */}
+    <LiquidGlass 
+      variant="card" 
+      intensity="medium"
+      isDarkMode={isDarkMode}
+      className="p-6 cursor-pointer transition-all duration-300 hover:scale-105"
+      onClick={() => onPageChange("network-metrics")}
+    >
+      <div className="flex items-start">
+        <Shield className="w-8 h-8 text-red-500 mt-1" />
+        <div className="ml-4 flex-1">
+          <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+            DDoS Threats
+          </p>
+          <p className="text-2xl font-bold text-red-600 mb-1">
+            {ddosServers}
+          </p>
+          <p className="text-xs text-gray-500">Servers at risk</p>
+        </div>
+      </div>
+    </LiquidGlass>
+
+    {/* Application Errors - Click to go to app logs */}
+    <LiquidGlass 
+      variant="card" 
+      intensity="medium"
+      isDarkMode={isDarkMode}
+      className="p-6 cursor-pointer transition-all duration-300 hover:scale-105"
+      onClick={() => onPageChange("app-logs")}
+    >
+      <div className="flex items-start">
+        <AlertTriangle className="w-8 h-8 text-red-500 mt-1" />
+        <div className="ml-4 flex-1">
+          <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+            Application Errors
+          </p>
+          <p className="text-2xl font-bold text-red-600 mb-1">
+            {dashboardStats.error_stats?.reduce((sum, stat) => sum + stat.count, 0) || 0}
+          </p>
+          <p className="text-xs text-gray-500">Last 24 hours</p>
+        </div>
+      </div>
+    </LiquidGlass>
+  </div>
+</LiquidGlass>
 
       {/* AI Performance Summary with Liquid Glass */}
       <LiquidGlass 
@@ -314,7 +346,7 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
             <div className="flex items-center">
               <h2 className={`text-xl font-bold flex items-center ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                 <Brain className="w-6 h-6 mr-2 text-purple-600" />
-                AI Performance Summary
+                Performance Summary
               </h2>
               <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full flex items-center bg-gradient-to-r from-blue-500 to-purple-600 text-white">
                 <span className="w-2 h-2 rounded-full mr-1 bg-white" />

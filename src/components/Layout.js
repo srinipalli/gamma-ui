@@ -205,7 +205,7 @@ const Layout = ({
               className={`p-2 rounded-2xl backdrop-blur-lg border shadow-lg ${
                 isDarkMode 
                   ? "bg-gray-800/80 border-gray-600/40" 
-                  : "bg-white/80 border-gray-200/40"
+                  : "bg-white/90 border-gray-200/50 shadow-xl"
               }`}
             >
               <ul className="flex items-center gap-2">
@@ -246,7 +246,7 @@ const Layout = ({
               className={`p-2 rounded-2xl backdrop-blur-lg border shadow-lg ${
                 isDarkMode 
                   ? "bg-gray-800/80 border-gray-600/40" 
-                  : "bg-white/80 border-gray-200/40"
+                  : "bg-white/90 border-gray-200/50 shadow-xl"
               }`}
             >
               <div className="flex items-center gap-2">

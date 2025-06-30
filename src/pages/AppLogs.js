@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { FileText, Search, Filter, RefreshCw, AlertTriangle, Info, CheckCircle, Brain, Loader2, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react"
+import { FileText, Search, Filter, RefreshCw, AlertTriangle, Info, CheckCircle, Brain, Loader2, TrendingUp, TrendingDown, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { api } from "../api/client"
+import LiquidGlass from "../components/LiquidGlass"
 
 const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
   const [logs, setLogs] = useState([])
@@ -150,6 +151,18 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
     fetchLLMAnalysis(log._id)
   }
 
+  const closeModal = () => {
+    setSelectedLog(null)
+    setLlmAnalysis(null)
+    setAnalysisError(null)
+  }
+
+  const handleModalClick = (e) => {
+    if (e.target === e.currentTarget) {
+      closeModal()
+    }
+  }
+
   const getLevelIcon = (level) => {
     switch (level) {
       case "ERROR":
@@ -191,106 +204,179 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header with Unified Metrics Container */}
+      <LiquidGlass 
+        variant="card" 
+        intensity="medium"
+        isDarkMode={isDarkMode}
+        className="p-6"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Application Logs</h1>
-          <p className="text-gray-600">
+          <h1 className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+            Application Logs
+          </h1>
+          <p className={`${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
             Real-time application logging and error tracking
             {selectedEnvironment !== "All" && ` - ${selectedEnvironment}`}
             {selectedApp !== "All" && ` - ${selectedApp}`}
           </p>
         </div>
-        <button
-          onClick={() => fetchLogs(currentPage, pageSize)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-      </div>
+
+        {/* Unified Metrics Container */}
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mt-6">
+          {/* Total Logs */}
+          <LiquidGlass 
+            variant="card" 
+            intensity="medium"
+            isDarkMode={isDarkMode}
+            className="p-6 transition-all duration-300 hover:scale-105"
+          >
+            <div className="flex items-start">
+              <FileText className="w-8 h-8 text-blue-500 mt-1" />
+              <div className="ml-4 flex-1">
+                <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                  Total Logs
+                </p>
+                <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-1`}>
+                  {logStats.totalLogs}
+                </p>
+                <p className="text-xs text-gray-500">Logs</p>
+              </div>
+            </div>
+          </LiquidGlass>
+
+          {/* Error Logs */}
+          <LiquidGlass 
+            variant="card" 
+            intensity="medium"
+            isDarkMode={isDarkMode}
+            className="p-6 transition-all duration-300 hover:scale-105"
+          >
+            <div className="flex items-start">
+              <AlertTriangle className="w-8 h-8 text-red-500 mt-1" />
+              <div className="ml-4 flex-1">
+                <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                  Errors
+                </p>
+                <p className="text-2xl font-bold text-red-600 mb-1">
+                  {logStats.errorLogs}
+                </p>
+                <p className="text-xs text-gray-500">Error Logs</p>
+              </div>
+            </div>
+          </LiquidGlass>
+
+          {/* Warning Logs */}
+          <LiquidGlass 
+            variant="card" 
+            intensity="medium"
+            isDarkMode={isDarkMode}
+            className="p-6 transition-all duration-300 hover:scale-105"
+          >
+            <div className="flex items-start">
+              <TrendingDown className="w-8 h-8 text-yellow-500 mt-1" />
+              <div className="ml-4 flex-1">
+                <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                  Warnings
+                </p>
+                <p className="text-2xl font-bold text-yellow-600 mb-1">
+                  {logStats.warningLogs}
+                </p>
+                <p className="text-xs text-gray-500">Warning Logs</p>
+              </div>
+            </div>
+          </LiquidGlass>
+
+          {/* Info Logs */}
+          <LiquidGlass 
+            variant="card" 
+            intensity="medium"
+            isDarkMode={isDarkMode}
+            className="p-6 transition-all duration-300 hover:scale-105"
+          >
+            <div className="flex items-start">
+              <Info className="w-8 h-8 text-green-500 mt-1" />
+              <div className="ml-4 flex-1">
+                <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                  Info Logs
+                </p>
+                <p className="text-2xl font-bold text-green-600 mb-1">
+                  {logStats.infoLogs}
+                </p>
+                <p className="text-xs text-gray-500">Info Logs</p>
+              </div>
+            </div>
+          </LiquidGlass>
+
+          {/* Critical Logs */}
+          <LiquidGlass 
+            variant="card" 
+            intensity="medium"
+            isDarkMode={isDarkMode}
+            className="p-6 transition-all duration-300 hover:scale-105"
+          >
+            <div className="flex items-start">
+              <Brain className="w-8 h-8 text-purple-500 mt-1" />
+              <div className="ml-4 flex-1">
+                <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                  Critical
+                </p>
+                <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-1`}>
+                  {logStats.criticalLogs}
+                </p>
+                <p className="text-xs text-gray-500">Critical Logs</p>
+              </div>
+            </div>
+          </LiquidGlass>
+
+          {/* Recent Errors */}
+          <LiquidGlass 
+            variant="card" 
+            intensity="medium"
+            isDarkMode={isDarkMode}
+            className="p-6 transition-all duration-300 hover:scale-105"
+          >
+            <div className="flex items-start">
+              <TrendingUp className="w-8 h-8 text-orange-500 mt-1" />
+              <div className="ml-4 flex-1">
+                <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
+                  Recent Errors
+                </p>
+                <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-1`}>
+                  {logStats.recentErrors}
+                </p>
+                <p className="text-xs text-gray-500">Recent</p>
+              </div>
+            </div>
+          </LiquidGlass>
+        </div>
+
+        
+      </LiquidGlass>
 
       {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-600">Loading application logs...</span>
-        </div>
+        <LiquidGlass 
+          variant="card" 
+          intensity="medium"
+          isDarkMode={isDarkMode}
+          className="p-12"
+        >
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className={`ml-3 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+              Loading application logs...
+            </span>
+          </div>
+        </LiquidGlass>
       ) : (
         <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
-            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-              <div className="flex items-center">
-                <FileText className="w-8 h-8 text-blue-500" />
-                <div className="ml-4">
-                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
-                    Total Logs
-                  </p>
-                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                    {logStats.totalLogs}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-              <div className="flex items-center">
-                <AlertTriangle className="w-8 h-8 text-red-500" />
-                <div className="ml-4">
-                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Errors</p>
-                  <p className="text-2xl font-bold text-red-600">{logStats.errorLogs}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-              <div className="flex items-center">
-                <TrendingDown className="w-8 h-8 text-yellow-500" />
-                <div className="ml-4">
-                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Warnings</p>
-                  <p className="text-2xl font-bold text-yellow-600">{logStats.warningLogs}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-              <div className="flex items-center">
-                <Info className="w-8 h-8 text-green-500" />
-                <div className="ml-4">
-                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
-                    Info Logs
-                  </p>
-                  <p className="text-2xl font-bold text-green-600">{logStats.infoLogs}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-              <div className="flex items-center">
-                <Brain className="w-8 h-8 text-purple-500" />
-                <div className="ml-4">
-                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Critical</p>
-                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                    {logStats.criticalLogs}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800 text-white" : "bg-white"}`}>
-              <div className="flex items-center">
-                <TrendingUp className="w-8 h-8 text-orange-500" />
-                <div className="ml-4">
-                  <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>Recent Errors</p>
-                  <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-                    {logStats.recentErrors}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Search and Filter */}
-          <div className={`rounded-lg shadow p-6 transition-colors duration-300 ${isDarkMode ? "bg-gray-800" : "bg-white"}`}>
+          <LiquidGlass 
+            variant="card" 
+            intensity="medium"
+            isDarkMode={isDarkMode}
+            className="p-6"
+          >
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
@@ -300,7 +386,11 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                     placeholder="Search logs..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full pl-10 pr-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      isDarkMode 
+                        ? "bg-gray-700 border-gray-600 text-white placeholder-gray-400" 
+                        : "bg-white border-gray-300 text-gray-900"
+                    }`}
                   />
                 </div>
               </div>
@@ -309,7 +399,11 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                 <select
                   value={levelFilter}
                   onChange={(e) => setLevelFilter(e.target.value)}
-                  className="border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`border rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    isDarkMode 
+                      ? "bg-gray-700 border-gray-600 text-white" 
+                      : "bg-white border-gray-300 text-gray-900"
+                  }`}
                 >
                   <option value="ALL">All Levels</option>
                   <option value="ERROR">Error</option>
@@ -319,11 +413,16 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                 </select>
               </div>
             </div>
-          </div>
+          </LiquidGlass>
 
           {/* Logs Table */}
-          <div className={`rounded-lg shadow overflow-hidden transition-colors duration-300 ${isDarkMode ? "bg-gray-800" : "bg-white"}`}>
-            <div className={`px-6 py-4 border-b ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
+          <LiquidGlass 
+            variant="card" 
+            intensity="medium"
+            isDarkMode={isDarkMode}
+            className="overflow-hidden"
+          >
+            <div className={`px-6 py-4 border-b ${isDarkMode ? "border-gray-600/40" : "border-gray-200/40"}`}>
               <div className="flex items-center justify-between">
                 <h3 className={`text-lg font-medium ${isDarkMode ? "text-white" : "text-gray-900"}`}>
                   Application Logs
@@ -335,7 +434,11 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
                   <select
                     value={pageSize}
                     onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                    className={`px-2 py-1 border rounded text-sm ${
+                      isDarkMode 
+                        ? "bg-gray-700 border-gray-600 text-white" 
+                        : "bg-white border-gray-300 text-gray-900"
+                    }`}
                   >
                     <option value={10}>10 per page</option>
                     <option value={25}>25 per page</option>
@@ -349,308 +452,446 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
             {/* Logs Display */}
             <div className="space-y-4 p-4">
               {filteredLogs.map((log) => (
-                <div
+                <LiquidGlass
                   key={log._id}
-                  className={`rounded-lg shadow border-l-4 p-4 cursor-pointer hover:shadow-md transition-all duration-300 ${getLevelColor(log.level)} ${isDarkMode ? "bg-gray-800 hover:bg-gray-700" : "bg-white hover:bg-gray-50"}`}
+                  variant="card"
+                  intensity="subtle"
+                  isDarkMode={isDarkMode}
+                  className={`p-4 cursor-pointer transition-all duration-300 hover:scale-[1.02] border-l-4 ${
+                    log.level === "ERROR" ? "border-l-red-500" :
+                    log.level === "WARNING" ? "border-l-yellow-500" :
+                    log.level === "INFO" ? "border-l-blue-500" :
+                    "border-l-gray-300"
+                  }`}
                   onClick={() => handleLogSelect(log)}
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="font-mono text-xs text-gray-500">
+                    <span className={`font-mono text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
                       {new Date(log.timestamp || log.createdAt).toLocaleString()}
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${getLevelBadgeColor(log.level)}`}>
                       {log.level}
                     </span>
-                    <span className="text-xs text-gray-600">{log.logger}</span>
+                    <span className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>{log.logger}</span>
                     <span className="text-xs text-blue-600">{log.environment}</span>
                     <span className="text-xs text-green-600">{log.app_name}</span>
                     <span className="text-xs text-purple-600">{log.server}</span>
                   </div>
-                  <div className="text-sm text-gray-900">{log.message}</div>
+                  <div className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-900"}`}>{log.message}</div>
                   {log.exception_type && (
                     <div className="mt-2 text-xs text-red-700">
                       <strong>{log.exception_type}:</strong> {log.exception_message}
                     </div>
                   )}
-                </div>
+                </LiquidGlass>
               ))}
 
               {filteredLogs.length === 0 && (
                 <div className="text-center py-12">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No logs found</h3>
-                  <p className="text-gray-600">No logs match the current filters and search criteria.</p>
+                  <FileText className={`w-12 h-12 mx-auto mb-4 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`} />
+                  <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                    No logs found
+                  </h3>
+                  <p className={isDarkMode ? "text-gray-400" : "text-gray-600"}>
+                    No logs match the current filters and search criteria.
+                  </p>
                 </div>
               )}
             </div>
 
             {/* Pagination Controls */}
             {pagination.total_pages > 1 && (
-              <div className={`px-6 py-4 border-t ${isDarkMode ? "border-gray-700" : "border-gray-200"}`}>
+              <div className={`px-6 py-4 border-t ${isDarkMode ? "border-gray-600/40" : "border-gray-200/40"}`}>
                 <div className="flex items-center justify-between">
                   <div className={`text-sm ${isDarkMode ? "text-gray-300" : "text-gray-600"}`}>
                     Page {pagination.current_page} of {pagination.total_pages}
                   </div>
                   <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={!pagination.has_prev}
-                      className={`px-3 py-1 rounded border ${
-                        pagination.has_prev
-                          ? "border-gray-300 hover:bg-gray-50"
-                          : "border-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
+                    <LiquidGlass variant="button" intensity="subtle" isDarkMode={isDarkMode}>
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={!pagination.has_prev}
+                        className={`px-3 py-1 rounded transition-colors ${
+                          pagination.has_prev
+                            ? isDarkMode
+                              ? "hover:bg-gray-700 text-gray-300"
+                              : "hover:bg-gray-50 text-gray-700"
+                            : "text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                    </LiquidGlass>
                     
                     {Array.from({ length: Math.min(5, pagination.total_pages) }, (_, i) => {
                       const page = Math.max(1, pagination.current_page - 2) + i
                       if (page <= pagination.total_pages) {
                         return (
-                          <button
-                            key={page}
-                            onClick={() => handlePageChange(page)}
-                            className={`px-3 py-1 rounded border ${
-                              page === pagination.current_page
-                                ? "bg-blue-600 text-white border-blue-600"
-                                : "border-gray-300 hover:bg-gray-50"
-                            }`}
-                          >
-                            {page}
-                          </button>
+                          <LiquidGlass key={page} variant="button" intensity="subtle" isDarkMode={isDarkMode}>
+                            <button
+                              onClick={() => handlePageChange(page)}
+                              className={`px-3 py-1 rounded transition-colors ${
+                                page === pagination.current_page
+                                  ? "bg-blue-600 text-white"
+                                  : isDarkMode
+                                    ? "hover:bg-gray-700 text-gray-300"
+                                    : "hover:bg-gray-50 text-gray-700"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          </LiquidGlass>
                         )
                       }
                       return null
                     })}
                     
-                    <button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={!pagination.has_next}
-                      className={`px-3 py-1 rounded border ${
-                        pagination.has_next
-                          ? "border-gray-300 hover:bg-gray-50"
-                          : "border-gray-200 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+                    <LiquidGlass variant="button" intensity="subtle" isDarkMode={isDarkMode}>
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={!pagination.has_next}
+                        className={`px-3 py-1 rounded transition-colors ${
+                          pagination.has_next
+                            ? isDarkMode
+                              ? "hover:bg-gray-700 text-gray-300"
+                              : "hover:bg-gray-50 text-gray-700"
+                            : "text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </LiquidGlass>
                   </div>
                 </div>
               </div>
             )}
-          </div>
+          </LiquidGlass>
         </>
       )}
 
       {/* Log Detail Modal */}
       {selectedLog && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-          onClick={() => setSelectedLog(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4"
+          onClick={handleModalClick}
         >
-          <div
-            className={`rounded-lg shadow-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto transition-colors duration-300 ${
-              isDarkMode ? "bg-gray-800 text-white" : "bg-white"
-            }`}
-            onClick={(e) => e.stopPropagation()}
+          <LiquidGlass 
+            variant="card" 
+            intensity="strong"
+            isDarkMode={isDarkMode}
+            className="w-full max-w-4xl max-h-[90vh] overflow-y-auto"
           >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold">Log Details</h3>
-              <button onClick={() => setSelectedLog(null)} className="text-gray-400 hover:text-gray-600">
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Timestamp:</strong> {new Date(selectedLog.timestamp || selectedLog.createdAt).toLocaleString()}
-                </div>
-                <div>
-                  <strong>Level:</strong>
-                  <span
-                    className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${getLevelBadgeColor(selectedLog.level)}`}
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className={`text-lg font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
+                  Log Details
+                </h3>
+                <LiquidGlass variant="button" intensity="subtle" isDarkMode={isDarkMode}>
+                  <button 
+                    onClick={closeModal}
+                    className={`p-2 rounded-md transition-colors ${
+                      isDarkMode 
+                        ? "hover:bg-gray-700 text-gray-400 hover:text-gray-200" 
+                        : "hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                    }`}
                   >
-                    {selectedLog.level}
-                  </span>
-                </div>
-                <div>
-                  <strong>Logger:</strong> {selectedLog.logger}
-                </div>
-                <div>
-                  <strong>Environment:</strong> {selectedLog.environment}
-                </div>
-                <div>
-                  <strong>Server:</strong> {selectedLog.server}
-                </div>
-                <div>
-                  <strong>Application:</strong> {selectedLog.app_name}
-                </div>
-                {selectedLog.path && (
-                  <div className="col-span-2">
-                    <strong>Path:</strong> {selectedLog.path}
-                  </div>
-                )}
+                    <X className="w-5 h-5" />
+                  </button>
+                </LiquidGlass>
               </div>
 
-              <div>
-                <strong>Message:</strong>
-                <div className="mt-1 p-3 bg-gray-100 rounded text-sm">{selectedLog.message}</div>
-              </div>
-
-              {selectedLog.exception_type && (
-                <div>
-                  <strong>Exception:</strong>
-                  <div className="mt-1 p-3 bg-red-50 border border-red-200 rounded text-sm">
-                    <div>
-                      <strong>Type:</strong> {selectedLog.exception_type}
-                    </div>
-                    <div>
-                      <strong>Message:</strong> {selectedLog.exception_message}
-                    </div>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <strong>Timestamp:</strong> {new Date(selectedLog.timestamp || selectedLog.createdAt).toLocaleString()}
                   </div>
-                </div>
-              )}
-
-              {selectedLog.stacktrace && (
-                <div>
-                  <strong>Stack Trace:</strong>
-                  <pre className="mt-1 p-3 bg-gray-900 text-green-400 rounded text-xs overflow-x-auto">
-                    {selectedLog.stacktrace}
-                  </pre>
-                </div>
-              )}
-
-              {/* LLM Analysis Section */}
-              <div className="border-t border-gray-200 pt-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center">
-                    <strong className="flex items-center gap-2">
-                      <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <Brain className="w-3 h-3 text-white" />
-                      </div>
-                      LLM Analysis
-                    </strong>
-                    <span className="ml-2 px-2 py-1 text-xs font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full flex items-center">
-                      <span className="w-2 h-2 bg-white rounded-full mr-1 animate-pulse"></span>
-                      AI Powered
+                  <div>
+                    <strong>Level:</strong>
+                    <span
+                      className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${getLevelBadgeColor(selectedLog.level)}`}
+                    >
+                      {selectedLog.level}
                     </span>
                   </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => fetchLLMAnalysis(selectedLog._id)}
-                      className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
-                      disabled={analysisLoading}
-                    >
-                      {analysisLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Refresh"}
-                    </button>
-                    <button 
-                      onClick={() => generateLLMAnalysis(selectedLog)}
-                      className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
-                      disabled={analysisLoading}
-                    >
-                      Generate New
-                    </button>
+                  <div>
+                    <strong>Logger:</strong> {selectedLog.logger}
                   </div>
+                  <div>
+                    <strong>Environment:</strong> {selectedLog.environment}
+                  </div>
+                  <div>
+                    <strong>Server:</strong> {selectedLog.server}
+                  </div>
+                  <div>
+                    <strong>Application:</strong> {selectedLog.app_name}
+                  </div>
+                  {selectedLog.path && (
+                    <div className="col-span-2">
+                      <strong>Path:</strong> {selectedLog.path}
+                    </div>
+                  )}
                 </div>
 
-                {analysisLoading ? (
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-blue-600 mr-3" />
-                      <span className="text-blue-600">Analyzing log with AI...</span>
+                <div>
+                  <strong>Message:</strong>
+                  <LiquidGlass 
+                    variant="panel" 
+                    intensity="subtle"
+                    isDarkMode={isDarkMode}
+                    className="mt-1 p-3"
+                  >
+                    <div className="text-sm">{selectedLog.message}</div>
+                  </LiquidGlass>
+                </div>
+
+                {selectedLog.exception_type && (
+                  <div>
+                    <strong>Exception:</strong>
+                    <LiquidGlass 
+                      variant="panel" 
+                      intensity="subtle"
+                      isDarkMode={isDarkMode}
+                      className="mt-1 p-3 border-l-4 border-red-400"
+                    >
+                      <div className="text-sm">
+                        <div>
+                          <strong>Type:</strong> {selectedLog.exception_type}
+                        </div>
+                        <div>
+                          <strong>Message:</strong> {selectedLog.exception_message}
+                        </div>
+                      </div>
+                    </LiquidGlass>
+                  </div>
+                )}
+
+                {selectedLog.stacktrace && (
+                  <div>
+                    <strong>Stack Trace:</strong>
+                    <LiquidGlass 
+                      variant="panel" 
+                      intensity="subtle"
+                      isDarkMode={isDarkMode}
+                      className="mt-1 p-3"
+                    >
+                      <pre className={`text-xs overflow-x-auto ${
+                        isDarkMode ? "text-green-400" : "text-gray-800"
+                      }`}>
+                        {selectedLog.stacktrace}
+                      </pre>
+                    </LiquidGlass>
+                  </div>
+                )}
+
+                {/* LLM Analysis Section */}
+                <div className={`border-t pt-4 ${isDarkMode ? "border-gray-600" : "border-gray-200"}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center">
+                      <strong className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                          <Brain className="w-3 h-3 text-white" />
+                        </div>
+                        LLM Analysis
+                      </strong>
+                      <span className="ml-2 px-2 py-1 text-xs font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full flex items-center">
+                        <span className="w-2 h-2 bg-white rounded-full mr-1 animate-pulse"></span>
+                        AI Powered
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <LiquidGlass variant="button" intensity="subtle" isDarkMode={isDarkMode}>
+                        <button 
+                          onClick={() => fetchLLMAnalysis(selectedLog._id)}
+                          className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                            isDarkMode 
+                              ? "bg-blue-900/50 hover:bg-blue-800/50 text-blue-300" 
+                              : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                          }`}
+                          disabled={analysisLoading}
+                        >
+                          {analysisLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Refresh"}
+                        </button>
+                      </LiquidGlass>
+                      <LiquidGlass variant="button" intensity="subtle" isDarkMode={isDarkMode}>
+                        <button 
+                          onClick={() => generateLLMAnalysis(selectedLog)}
+                          className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                            isDarkMode 
+                              ? "bg-green-900/50 hover:bg-green-800/50 text-green-300" 
+                              : "bg-green-100 text-green-700 hover:bg-green-200"
+                          }`}
+                          disabled={analysisLoading}
+                        >
+                          Generate New
+                        </button>
+                      </LiquidGlass>
                     </div>
                   </div>
-                ) : analysisError ? (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="text-red-700 text-sm">{analysisError}</div>
-                    <button 
-                      onClick={() => generateLLMAnalysis(selectedLog)}
-                      className="mt-2 px-3 py-1 text-xs bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+
+                  {analysisLoading ? (
+                    <LiquidGlass 
+                      variant="panel" 
+                      intensity="subtle"
+                      isDarkMode={isDarkMode}
+                      className="p-4"
                     >
-                      Generate Analysis
-                    </button>
-                  </div>
-                ) : llmAnalysis ? (
-                  <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-blue-600 mr-3" />
+                        <span className="text-blue-600">Analyzing log with AI...</span>
+                      </div>
+                    </LiquidGlass>
+                  ) : analysisError ? (
+                    <LiquidGlass 
+                      variant="panel" 
+                      intensity="subtle"
+                      isDarkMode={isDarkMode}
+                      className="p-4 border-l-4 border-red-400"
+                    >
+                      <div className={`text-sm ${isDarkMode ? "text-red-300" : "text-red-700"}`}>{analysisError}</div>
+                      <LiquidGlass variant="button" intensity="subtle" isDarkMode={isDarkMode}>
+                        <button 
+                          onClick={() => generateLLMAnalysis(selectedLog)}
+                          className={`mt-2 px-3 py-1 text-xs rounded-md transition-colors ${
+                            isDarkMode 
+                              ? "bg-red-900/50 hover:bg-red-800/50 text-red-300" 
+                              : "bg-red-100 text-red-700 hover:bg-red-200"
+                          }`}
+                        >
+                          Generate Analysis
+                        </button>
+                      </LiquidGlass>
+                    </LiquidGlass>
+                  ) : llmAnalysis ? (
                     <div className="space-y-4">
-                      <div>
-                        <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                      <LiquidGlass 
+                        variant="panel" 
+                        intensity="subtle"
+                        isDarkMode={isDarkMode}
+                        className="p-4 border-l-4 border-red-400"
+                      >
+                        <h4 className={`font-semibold mb-2 flex items-center gap-2 ${
+                          isDarkMode ? "text-red-400" : "text-red-700"
+                        }`}>
                           <AlertTriangle className="w-4 h-4 text-red-500" />
                           Root Cause Analysis:
                         </h4>
-                        <div className="bg-white p-3 rounded border-l-4 border-red-400">
-                          <p className="text-sm text-gray-700 leading-relaxed">
-                            {llmAnalysis.issue}
-                          </p>
-                        </div>
-                      </div>
+                        <p className={`text-sm leading-relaxed ${
+                          isDarkMode ? "text-red-300" : "text-red-800"
+                        }`}>
+                          {llmAnalysis.issue}
+                        </p>
+                      </LiquidGlass>
 
-                      <div>
-                        <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                      <LiquidGlass 
+                        variant="panel" 
+                        intensity="subtle"
+                        isDarkMode={isDarkMode}
+                        className="p-4 border-l-4 border-yellow-400"
+                      >
+                        <h4 className={`font-semibold mb-2 flex items-center gap-2 ${
+                          isDarkMode ? "text-yellow-400" : "text-yellow-700"
+                        }`}>
                           <AlertTriangle className="w-4 h-4 text-yellow-500" />
                           Impact Assessment:
                         </h4>
-                        <div className="bg-white p-3 rounded border-l-4 border-yellow-400">
-                          <p className="text-sm text-gray-700 leading-relaxed">
-                            {llmAnalysis.impact}
-                          </p>
-                        </div>
-                      </div>
+                        <p className={`text-sm leading-relaxed ${
+                          isDarkMode ? "text-yellow-300" : "text-yellow-800"
+                        }`}>
+                          {llmAnalysis.impact}
+                        </p>
+                      </LiquidGlass>
 
-                      <div>
-                        <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                      <LiquidGlass 
+                        variant="panel" 
+                        intensity="subtle"
+                        isDarkMode={isDarkMode}
+                        className="p-4 border-l-4 border-green-400"
+                      >
+                        <h4 className={`font-semibold mb-2 flex items-center gap-2 ${
+                          isDarkMode ? "text-green-400" : "text-green-700"
+                        }`}>
                           <CheckCircle className="w-4 h-4 text-green-500" />
                           Recommended Actions:
                         </h4>
-                        <div className="bg-white p-3 rounded border-l-4 border-green-400">
-                          <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                            {llmAnalysis.resolution}
-                          </p>
-                        </div>
-                      </div>
+                        <p className={`text-sm leading-relaxed whitespace-pre-wrap ${
+                          isDarkMode ? "text-green-300" : "text-green-800"
+                        }`}>
+                          {llmAnalysis.resolution}
+                        </p>
+                      </LiquidGlass>
 
                       {llmAnalysis.commands && llmAnalysis.commands.length > 0 && (
                         <div>
-                          <h4 className="font-semibold text-gray-800 mb-2">Commands:</h4>
+                          <h4 className={`font-semibold mb-2 ${isDarkMode ? "text-white" : "text-gray-800"}`}>Commands:</h4>
                           <div className="space-y-2">
                             {llmAnalysis.commands.map((command, index) => (
-                              <div key={index} className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm">
-                                <span className="text-gray-500">$ </span>{command}
-                              </div>
+                              <LiquidGlass 
+                                key={index}
+                                variant="panel" 
+                                intensity="subtle"
+                                isDarkMode={isDarkMode}
+                                className="p-3"
+                              >
+                                <div className={`font-mono text-sm ${
+                                  isDarkMode ? "text-green-400" : "text-gray-800"
+                                }`}>
+                                  <span className="text-gray-500">$ </span>{command}
+                                </div>
+                              </LiquidGlass>
                             ))}
                           </div>
                         </div>
                       )}
 
                       {llmAnalysis.original_log && (
-                        <div className="border-t border-gray-200 pt-3">
-                          <h4 className="font-medium text-gray-600 text-xs mb-2">Analysis Generated For:</h4>
-                          <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
-                            Log ID: {llmAnalysis.original_log_id}
-                          </div>
+                        <div className={`border-t pt-3 ${isDarkMode ? "border-gray-600" : "border-gray-200"}`}>
+                          <h4 className={`font-medium text-xs mb-2 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                            Analysis Generated For:
+                          </h4>
+                          <LiquidGlass 
+                            variant="panel" 
+                            intensity="subtle"
+                            isDarkMode={isDarkMode}
+                            className="p-2"
+                          >
+                            <div className={`text-xs ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
+                              Log ID: {llmAnalysis.original_log_id}
+                            </div>
+                          </LiquidGlass>
                         </div>
                       )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <div className="text-center py-4">
-                      <Brain className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-gray-600 text-sm mb-3">No LLM analysis available for this log</p>
-                      <button 
-                        onClick={() => generateLLMAnalysis(selectedLog)}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
-                      >
-                        Generate AI Analysis
-                      </button>
-                    </div>
-                  </div>
-                )}
+                  ) : (
+                    <LiquidGlass 
+                      variant="panel" 
+                      intensity="subtle"
+                      isDarkMode={isDarkMode}
+                      className="p-4"
+                    >
+                      <div className="text-center py-4">
+                        <Brain className={`w-8 h-8 mx-auto mb-2 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`} />
+                        <p className={`text-sm mb-3 ${isDarkMode ? "text-gray-400" : "text-gray-600"}`}>
+                          No LLM analysis available for this log
+                        </p>
+                        <LiquidGlass variant="button" intensity="subtle" isDarkMode={isDarkMode}>
+                          <button 
+                            onClick={() => generateLLMAnalysis(selectedLog)}
+                            className={`px-4 py-2 rounded-md transition-colors text-sm ${
+                              isDarkMode 
+                                ? "bg-blue-900/50 hover:bg-blue-800/50 text-blue-300" 
+                                : "bg-blue-500 text-white hover:bg-blue-600"
+                            }`}
+                          >
+                            Generate AI Analysis
+                          </button>
+                        </LiquidGlass>
+                      </div>
+                    </LiquidGlass>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          </LiquidGlass>
         </div>
       )}
     </div>
