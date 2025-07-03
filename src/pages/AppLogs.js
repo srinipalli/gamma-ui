@@ -14,12 +14,13 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
     warningLogs: 0,
     infoLogs: 0,
     criticalLogs: 0,
-    recentErrors: 0
+    recentErrors: 0,
+    llmAnalyzedLogs: 0 // Initialize llmAnalyzedLogs
   })
   const [pagination, setPagination] = useState({
     current_page: 1,
     total_pages: 0,
-    total_count: 0,
+    total_count: 0, 
     page_size: 10,
     has_next: false,
     has_prev: false,
@@ -38,11 +39,24 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
   useEffect(() => {
     setCurrentPage(1)
     fetchLogs(1, pageSize)
+    fetchLogStats(selectedEnvironment, selectedApp); // Fetch and update stats, including LLM analyzed count
   }, [selectedEnvironment, selectedApp])
 
   useEffect(() => {
     fetchLogs(currentPage, pageSize)
   }, [currentPage, pageSize])
+
+  const fetchLogStats = async (environment, app) => {
+    try {
+      const llmCount = await getLLMAnalyzedCount(environment, app);
+      setLogStats(prevStats => ({
+        ...prevStats,
+        llmAnalyzedLogs: llmCount
+      }));
+    } catch (error) {
+      console.error("Failed to fetch LLM analyzed count for stats:", error);
+    }
+  };
 
   const fetchLogs = async (page = 1, limit = 10) => {
     try {
@@ -54,14 +68,19 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
       console.log("Received app logs:", logsData)
       
       setLogs(logsData.logs || [])
-      setLogStats(logsData.stats || {
-        totalLogs: 0,
-        errorLogs: 0,
-        warningLogs: 0,
-        infoLogs: 0,
-        criticalLogs: 0,
-        recentErrors: 0
-      })
+      // Update logStats from logsData, and importantly, ensure llmAnalyzedLogs is carried over or updated
+      setLogStats(prevStats => ({
+        ...logsData.stats || {
+          totalLogs: 0,
+          errorLogs: 0,
+          warningLogs: 0,
+          infoLogs: 0,
+          criticalLogs: 0,
+          recentErrors: 0
+        },
+        llmAnalyzedLogs: prevStats.llmAnalyzedLogs // Preserve llmAnalyzedLogs from previous state or update if logsData provides it
+      }));
+
       setPagination(logsData.pagination || {
         current_page: 1,
         total_pages: 0,
@@ -75,14 +94,15 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
     } catch (error) {
       console.error("Failed to fetch logs:", error)
       setLogs([])
-      setLogStats({
+      setLogStats(prevStats => ({
         totalLogs: 0,
         errorLogs: 0,
         warningLogs: 0,
         infoLogs: 0,
         criticalLogs: 0,
-        recentErrors: 0
-      })
+        recentErrors: 0,
+        llmAnalyzedLogs: prevStats.llmAnalyzedLogs // Preserve LLM analyzed count on error
+      }))
     } finally {
       setLoading(false)
     }
@@ -100,6 +120,18 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
     setCurrentPage(newPage)
   }
 
+  const getLLMAnalyzedCount = async (environment, app) => {
+    try {
+      // Assuming api.getLogsWithAnalysis returns an object with logs_with_analysis
+      const response = await api.getLogsWithAnalysis(environment, app);
+      return response.logs_with_analysis || 0;
+    } catch (error) {
+      console.error("Failed to get LLM analyzed count:", error);
+      return 0;
+    }
+  };
+
+
   const handlePageSizeChange = (newSize) => {
     setPageSize(newSize)
     setCurrentPage(1)
@@ -113,6 +145,8 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
       const analysis = await api.getLLMAnalysis(logId)
       console.log("Received analysis:", analysis)
       setLlmAnalysis(analysis)
+      // After successfully fetching analysis, re-fetch stats to update LLM analyzed count
+      fetchLogStats(selectedEnvironment, selectedApp); 
     } catch (error) {
       console.error("Failed to fetch LLM analysis:", error)
       setAnalysisError("No analysis available for this log")
@@ -136,6 +170,8 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
         app_name: log.app_name
       })
       setLlmAnalysis(analysis)
+      // After successfully generating analysis, re-fetch stats to update LLM analyzed count
+      fetchLogStats(selectedEnvironment, selectedApp); 
     } catch (error) {
       console.error("Failed to generate LLM analysis:", error)
       setAnalysisError("Failed to generate analysis")
@@ -308,7 +344,7 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
             </div>
           </LiquidGlass>
 
-          {/* Critical Logs */}
+          {/* LLM Analysed Logs */}
           <LiquidGlass 
             variant="card" 
             intensity="medium"
@@ -319,12 +355,12 @@ const AppLogs = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
               <Brain className="w-8 h-8 text-purple-500 mt-1" />
               <div className="ml-4 flex-1">
                 <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
-                  Critical
+                  LLM Analysed
                 </p>
                 <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-1`}>
-                  {logStats.criticalLogs}
+                  {logStats.llmAnalyzedLogs}
                 </p>
-                <p className="text-xs text-gray-500">Critical Logs</p>
+                <p className="text-xs text-gray-500">Analysed Logs</p>
               </div>
             </div>
           </LiquidGlass>

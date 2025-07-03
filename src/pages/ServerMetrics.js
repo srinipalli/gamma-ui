@@ -30,7 +30,8 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
   const [serverStats, setServerStats] = useState({
     totalServers: 0,
     healthyServers: 0,
-    criticalServers: 0,
+    // Renamed criticalServers to failureRiskServers to reflect new logic
+    failureRiskServers: 0, 
     avgCpuUsage: 0,
     avgMemoryUsage: 0,
     avgDiskUsage: 0
@@ -119,54 +120,62 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
     }
   }, [predictiveFlags, loading])
 
+  // Re-fetch metrics and flags when environment or app changes
   useEffect(() => {
     fetchServerMetrics()
     fetchPredictiveFlags()
   }, [selectedEnvironment, selectedApp])
 
-  const calculateServerStats = (metrics) => {
+  // Recalculate stats whenever serverMetrics or predictiveFlags change
+  useEffect(() => {
+    const stats = calculateServerStats(serverMetrics, predictiveFlags)
+    setServerStats(stats)
+  }, [serverMetrics, predictiveFlags])
+
+
+  const calculateServerStats = (metrics, flags) => {
     if (!metrics || metrics.length === 0) {
       return {
         totalServers: 0,
         healthyServers: 0,
-        criticalServers: 0,
+        failureRiskServers: 0, 
         avgCpuUsage: 0,
         avgMemoryUsage: 0,
         avgDiskUsage: 0
-      }
+      };
     }
 
-    const totalServers = metrics.length
-    const healthyServers = metrics.filter(m => m.server_health === "Good").length
-    const criticalServers = metrics.filter(m => 
-      m.server_health === "Critical" || m.server_health === "Bad"
-    ).length
+    const totalServers = metrics.length;
+    
+    // Calculate servers with failure risk based *only* on predictive flags
+    const failureRiskServers = flags.length; 
+    
+    // Healthy servers are total servers minus those identified as failure risk by predictive flags
+    const healthyServers = totalServers - failureRiskServers;
 
-    const avgCpuUsage = metrics.reduce((sum, m) => sum + (m.cpu_usage || 0), 0) / totalServers
-    const avgMemoryUsage = metrics.reduce((sum, m) => sum + (m.memory_usage || 0), 0) / totalServers
-    const avgDiskUsage = metrics.reduce((sum, m) => sum + (m.disk_utilization || 0), 0) / totalServers
+    const avgCpuUsage = metrics.reduce((sum, m) => sum + (m.cpu_usage || 0), 0) / totalServers;
+    const avgMemoryUsage = metrics.reduce((sum, m) => sum + (m.memory_usage || 0), 0) / totalServers;
+    const avgDiskUsage = metrics.reduce((sum, m) => sum + (m.disk_utilization || 0), 0) / totalServers;
 
     return {
       totalServers,
       healthyServers,
-      criticalServers,
+      failureRiskServers: failureRiskServers, 
       avgCpuUsage: Math.round(avgCpuUsage * 100) / 100,
       avgMemoryUsage: Math.round(avgMemoryUsage * 100) / 100,
       avgDiskUsage: Math.round(avgDiskUsage * 100) / 100
-    }
-  }
+    };
+  };
 
   const fetchServerMetrics = async () => {
     try {
       setLoading(true)
       const metrics = await api.getServerMetrics(selectedEnvironment, selectedApp)
       setServerMetrics(metrics)
-      // Calculate stats
-      const stats = calculateServerStats(metrics)
-      setServerStats(stats)
+      // Stats are now calculated in a separate useEffect
     } catch (error) {
       console.error("Failed to fetch server metrics:", error)
-      // Fallback data
+      // Fallback data for server metrics
       setServerMetrics([
         {
           server: "server1",
@@ -203,7 +212,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
             "Production": "Prod",
             "QA": "QA"
           }
-          const dbEnv = envMapping[selectedEnvironment]
+          const dbEnv = envMapping[selectedEnvironment] || selectedEnvironment; // Use selectedEnvironment as fallback
           return flag.environment === dbEnv
         }
         return true
@@ -213,6 +222,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
       setPredictiveFlags(filteredFlags)
     } catch (error) {
       console.error("Failed to fetch predictive flags:", error)
+      setPredictiveFlags([]) // Ensure flags are reset on error
     }
   }
 
@@ -269,7 +279,15 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
   }
 
   const getGlobalServerName = (serverName, environment) => {
-    return `${environment}-${serverName}`
+    // Ensure environment is in a consistent format for global naming
+    const envMapping = {
+      "Development": "Dev",
+      "Staging": "Stage", 
+      "Production": "Prod",
+      "QA": "QA"
+    }
+    const consistentEnv = envMapping[environment] || environment; // Use consistent name or original
+    return `${consistentEnv}-${serverName}`.toLowerCase(); // Consistent lowercase format for comparison
   }
 
   const isServerFlagged = (serverName, environment) => {
@@ -286,6 +304,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
     const dbEnv = envMapping[environment] || environment
     
     const isFlagged = predictiveFlags.some(flag => {
+      // Compare actual server_name and environment from the flag
       const matches = flag.server_name === serverName && flag.environment === dbEnv
       console.log(`Comparing: ${flag.server_name}/${flag.environment} vs ${serverName}/${dbEnv} = ${matches}`)
       return matches
@@ -315,6 +334,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
               : ""
         }`}
         onClick={() => {
+          // Only open modal if the server is actually flagged
           if (isFlagged) {
             setSelectedServerForAnalysis(globalServerName) 
             fetchPredictiveAnalysis(metric.server, metric.environment)
@@ -325,7 +345,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between mb-2">
             <h4 className={`text-md font-bold ${isDarkMode ? "text-white" : "text-gray-900"}`}>
-              {globalServerName}
+              {metric.server} {/* Display only server name in card title */}
               <span className={`text-xs ml-2 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>
                 ({metric.environment})
               </span>
@@ -515,7 +535,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
             </div>
           </div>
 
-          {/* Critical Servers */}
+          {/* Failure Risk Servers (previously Critical Servers) */}
           <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 hover:shadow-lg ${
             isDarkMode 
               ? "bg-gray-800/60 border-gray-600/40 hover:bg-gray-700/60" 
@@ -525,10 +545,10 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
               <AlertTriangle className="w-8 h-8 text-red-500 mt-1" />
               <div className="ml-4 flex-1">
                 <p className={`text-sm font-medium ${isDarkMode ? "text-gray-300" : "text-gray-600"} mb-1`}>
-                  Critical
+                  Failure Risk Detected
                 </p>
                 <p className="text-2xl font-bold text-red-600 mb-1">
-                  {serverStats.criticalServers}
+                  {serverStats.failureRiskServers}
                 </p>
                 <p className="text-xs text-gray-500">Servers</p>
               </div>
@@ -579,7 +599,7 @@ const ServerMetrics = ({ selectedEnvironment, selectedApp, isDarkMode }) => {
           <div className={`p-4 rounded-xl border transition-all duration-300 hover:scale-105 hover:shadow-lg ${
             isDarkMode 
               ? "bg-gray-800/60 border-gray-600/40 hover:bg-gray-700/60" 
-              : "bg-white/80 border-gray-200/40 hover:bg-white/90"
+              : "bg-white/80 border-gray-200/40 hover:bg-white/40"
           }`}>
             <div className="flex items-start">
               <HardDrive className="w-8 h-8 text-indigo-500 mt-1" />

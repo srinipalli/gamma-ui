@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { motion } from "framer-motion"
 import { Activity, Shield, AlertCircle, RefreshCw, CheckCircle, Server, Brain, AlertTriangle, Zap, Router, ShieldAlert } from "lucide-react"
 import GrafanaChart from "../components/GrafanaChart"
@@ -261,7 +261,7 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
           <p className={`text-2xl font-bold ${isDarkMode ? "text-white" : "text-gray-900"} mb-1`}>
             {getActiveServerCount()}
           </p>
-          <p className="text-xs text-gray-500">Monitored</p>
+          <p className="text-xs text-gray-300">Monitored</p>
         </div>
       </div>
     </LiquidGlass>
@@ -283,7 +283,7 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
           <p className="text-2xl font-bold text-orange-600 mb-1">
             {predictiveFlags.length}
           </p>
-          <p className="text-xs text-gray-500">Servers at risk</p>
+          <p className="text-xs text-gray-300">Servers at risk</p>
         </div>
       </div>
     </LiquidGlass>
@@ -305,7 +305,7 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
           <p className="text-2xl font-bold text-red-600 mb-1">
             {ddosServers}
           </p>
-          <p className="text-xs text-gray-500">Servers at risk</p>
+          <p className="text-xs text-gray-300">Servers at risk</p>
         </div>
       </div>
     </LiquidGlass>
@@ -327,7 +327,7 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
           <p className="text-2xl font-bold text-red-600 mb-1">
             {dashboardStats.error_stats?.reduce((sum, stat) => sum + stat.count, 0) || 0}
           </p>
-          <p className="text-xs text-gray-500">Last 24 hours</p>
+          <p className="text-xs text-gray-300">Last 24 hours</p>
         </div>
       </div>
     </LiquidGlass>
@@ -384,33 +384,34 @@ const Overview = ({ selectedEnvironment, selectedApp, isDarkMode, onPageChange }
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* AI System Analysis */}
             <LiquidGlass 
-              variant="panel" 
-              intensity="medium"
-              isDarkMode={isDarkMode}
-              className={`p-4 ${isDarkMode ? "border-purple-600/30" : "border-purple-200/30"}`}
-            >
-              <div className="flex items-center mb-3">
-                <Brain className="w-5 h-5 text-purple-600 mr-2" />
-                <h3 className={`font-semibold ${isDarkMode ? "text-purple-400" : "text-purple-800"}`}>AI Analysis</h3>
-              </div>
-              <div className={`text-gray-700 leading-relaxed ${isDarkMode ? "text-gray-300" : ""}`}>
-                <p className="text-sm mb-3">{mainSummary}</p>
-                {insights.length > 0 && (
-                  <div>
-                    <h4 className={`text-xs font-semibold mb-2 ${isDarkMode ? "text-purple-400" : "text-purple-700"}`}>
-                      Key Insights:
-                    </h4>
-                    <div className="space-y-1">
-                      {insights.map((insight, index) => (
-                        <p key={index} className="text-xs text-gray-600 dark:text-gray-400">
-                          {insight}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </LiquidGlass>
+  variant="panel" 
+  intensity="medium"
+  isDarkMode={isDarkMode}
+  className={`p-4 ${isDarkMode ? "border-purple-600/30" : "border-purple-200/30"}`}
+>
+  <div className="flex items-center mb-3">
+    <Brain className="w-5 h-5 text-purple-600 mr-2" />
+    <h3 className={`font-semibold ${isDarkMode ? "text-purple-400" : "text-purple-800"}`}>AI Analysis</h3>
+  </div>
+  <div className={`leading-relaxed ${isDarkMode ? "text-white" : "text-gray-700"}`}>
+    <p className={`text-sm mb-3 ${isDarkMode ? "text-white" : "text-gray-700"}`}>{mainSummary}</p>
+    {insights.length > 0 && (
+      <div>
+        <h4 className={`text-xs font-semibold mb-2 ${isDarkMode ? "text-purple-400" : "text-purple-700"}`}>
+          Key Insights:
+        </h4>
+        <div className="space-y-1">
+          {insights.map((insight, index) => (
+            <p key={index} className={`text-xs ${isDarkMode ? "text-gray-100" : "text-gray-600"}`}>
+              {insight}
+            </p>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</LiquidGlass>
+
 
             {/* Failure Risk Detection */}
             {predictiveFlags.length > 0 && (
