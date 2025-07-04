@@ -52,7 +52,7 @@ npx tailwindcss init -p
 npm start
 \`\`\`
 
-The React app will be available at `http://localhost:3000`
+The React app will be available at `http://localhost:3001`
 
 ### Backend Setup
 
